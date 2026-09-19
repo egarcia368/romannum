@@ -1,0 +1,72 @@
+# romannum
+
+A command line tool that converts between integers and roman numerals,
+one value per line.
+
+Roman numeral converters are easy to find, but most of them assume the
+whole input fits comfortably in a variable. That falls apart the moment
+someone hands you a file with a few million lines - a spreadsheet
+export, a generated invoice list, whatever. `romannum` reads its input
+line by line and writes each result as it goes, so memory use stays
+flat no matter how large the file is.
+
+## Usage
+
+Convert integers to roman numerals:
+
+```
+$ printf '1994\n58\n3999\n' | romannum to-roman
+MCMXCIV
+LVIII
+MMMCMXCIX
+```
+
+Convert roman numerals back to integers:
+
+```
+$ printf 'MCMXCIV\nLVIII\n' | romannum from-roman
+1994
+58
+```
+
+Either subcommand also accepts a file path instead of stdin:
+
+```
+$ romannum to-roman numbers.txt > roman.txt
+```
+
+Lines that fail to convert are reported on stderr with their line
+number, and processing continues with the rest of the file:
+
+```
+$ printf '1994\nnot-a-number\n58\n' | romannum to-roman
+MCMXCIV
+LVIII
+line 2: 'not-a-number' is not an integer
+```
+
+The exit code is 1 if any line failed and 0 otherwise.
+
+Valid input is a plain integer from 1 to 3999 for `to-roman`, or a
+canonical roman numeral (e.g. `IX`, not `VIIII`) for `from-roman`.
+Roman numerals have no way to represent zero or negative numbers, and
+the classical system stops at 3999.
+
+## Installing
+
+No dependencies beyond the Python standard library.
+
+```
+pip install -e .
+```
+
+This installs a `romannum` command on your PATH. You can also run it
+without installing:
+
+```
+python -m romannum.cli to-roman
+```
+
+## License
+
+MIT, see LICENSE.
