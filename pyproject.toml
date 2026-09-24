@@ -9,6 +9,9 @@ license = { text = "MIT" }
 [project.scripts]
 romannum = "romannum.cli:main"
 
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
@@ -18,3 +21,6 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -67,6 +67,13 @@ without installing:
 python -m romannum.cli to-roman
 ```
 
+## Testing
+
+```
+pip install -e '.[test]'
+pytest
+```
+
 ## License
 
 MIT, see LICENSE.
