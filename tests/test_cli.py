@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from romannum.cli import _int_to_roman_line, _process, main
+from romannum.cli import _int_to_roman_line, _iter_fields, _process, main, _unescape_delimiter
 
 
 def test_int_to_roman_line_converts():
@@ -65,3 +65,35 @@ def test_main_reads_from_file_argument(tmp_path, capsys):
     captured = capsys.readouterr()
     assert exit_code == 0
     assert captured.out == "MCMXCIV\nLVIII\n"
+
+
+def test_unescape_delimiter_supports_common_escapes():
+    assert _unescape_delimiter("\\t") == "\t"
+    assert _unescape_delimiter("\\n") == "\n"
+    assert _unescape_delimiter(",") == ","
+
+
+def test_iter_fields_splits_on_arbitrary_delimiter():
+    fileobj = io.StringIO("1994,58,3999")
+    assert list(_iter_fields(fileobj, ",")) == ["1994", "58", "3999"]
+
+
+def test_iter_fields_handles_delimiter_split_across_chunks():
+    fileobj = io.StringIO("1994,,58")
+    assert list(_iter_fields(fileobj, ",,", chunk_size=1)) == ["1994", "58"]
+
+
+def test_main_with_comma_delimiter(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "stdin", io.StringIO("1994,58,3999"))
+    exit_code = main(["to-roman", "--delimiter", ","])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out == "MCMXCIV\nLVIII\nMMMCMXCIX\n"
+
+
+def test_main_rejects_empty_delimiter(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "stdin", io.StringIO("1994"))
+    with pytest.raises(SystemExit):
+        main(["to-roman", "--delimiter", ""])
+    captured = capsys.readouterr()
+    assert "must not be empty" in captured.err

@@ -18,6 +18,37 @@ def _int_to_roman_line(line):
     return to_roman(n)
 
 
+_ESCAPES = {"\\n": "\n", "\\t": "\t", "\\r": "\r", "\\0": "\0"}
+
+
+def _unescape_delimiter(delimiter):
+    for escaped, literal in _ESCAPES.items():
+        delimiter = delimiter.replace(escaped, literal)
+    return delimiter
+
+
+def _iter_fields(fileobj, delimiter, chunk_size=65536):
+    """Yield delimiter-separated fields from a file-like object.
+
+    Reads in fixed chunks and splits the accumulated buffer instead of
+    reading the whole file up front, so a delimiter that never appears
+    (or a huge file) still costs one chunk plus the current field, not
+    the whole input.
+    """
+    buf = ""
+    while True:
+        chunk = fileobj.read(chunk_size)
+        if not chunk:
+            break
+        buf += chunk
+        parts = buf.split(delimiter)
+        buf = parts.pop()
+        for part in parts:
+            yield part
+    if buf:
+        yield buf
+
+
 def _process(lines, convert, out, err):
     had_error = False
     for lineno, raw in enumerate(lines, start=1):
@@ -46,11 +77,19 @@ def build_parser():
         "infile", nargs="?", type=argparse.FileType("r"), default=sys.stdin,
         help="file to read (defaults to stdin)",
     )
+    to_roman_cmd.add_argument(
+        "--delimiter", default=None,
+        help="split input on this string instead of newlines (supports \\n, \\t, \\r, \\0)",
+    )
 
     from_roman_cmd = sub.add_parser("from-roman", help="read roman numerals, write integers")
     from_roman_cmd.add_argument(
         "infile", nargs="?", type=argparse.FileType("r"), default=sys.stdin,
         help="file to read (defaults to stdin)",
+    )
+    from_roman_cmd.add_argument(
+        "--delimiter", default=None,
+        help="split input on this string instead of newlines (supports \\n, \\t, \\r, \\0)",
     )
 
     return parser
@@ -62,8 +101,16 @@ def main(argv=None):
 
     convert = _int_to_roman_line if args.command == "to-roman" else from_roman
 
+    if args.delimiter is not None:
+        delimiter = _unescape_delimiter(args.delimiter)
+        if not delimiter:
+            parser.error("--delimiter must not be empty")
+        lines = _iter_fields(args.infile, delimiter)
+    else:
+        lines = args.infile
+
     try:
-        had_error = _process(args.infile, convert, sys.stdout, sys.stderr)
+        had_error = _process(lines, convert, sys.stdout, sys.stderr)
     finally:
         if args.infile is not sys.stdin:
             args.infile.close()

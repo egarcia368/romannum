@@ -47,6 +47,26 @@ line 2: 'not-a-number' is not an integer
 
 The exit code is 1 if any line failed and 0 otherwise.
 
+If your input isn't newline-separated, pass `--delimiter` with the
+string to split on instead:
+
+```
+$ printf '1994,58,3999' | romannum to-roman --delimiter ,
+MCMXCIV
+LVIII
+MMMCMXCIX
+```
+
+`--delimiter` recognizes the escapes `\n`, `\t`, `\r`, and `\0`, so you
+can split on a literal tab without needing shell quoting tricks:
+
+```
+$ printf '1994\t58' | romannum to-roman --delimiter '\t'
+```
+
+Output is still written one result per line regardless of the input
+delimiter.
+
 Valid input is a plain integer from 1 to 3999 for `to-roman`, or a
 canonical roman numeral (e.g. `IX`, not `VIIII`) for `from-roman`.
 Roman numerals have no way to represent zero or negative numbers, and
