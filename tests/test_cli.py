@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from romannum.cli import _int_to_roman_line, _iter_fields, _process, main, _unescape_delimiter
+from romannum.cli import _convert_fields, _int_to_roman_line, _iter_fields, _process, main, _unescape_delimiter
 
 
 def test_int_to_roman_line_converts():
@@ -89,6 +89,49 @@ def test_main_with_comma_delimiter(monkeypatch, capsys):
     captured = capsys.readouterr()
     assert exit_code == 0
     assert captured.out == "MCMXCIV\nLVIII\nMMMCMXCIX\n"
+
+
+def test_convert_fields_keeps_empty_fields():
+    assert _convert_fields("1994, ,58", _int_to_roman_line, ",") == "MCMXCIV,,LVIII"
+
+
+def test_convert_fields_reports_every_bad_field():
+    with pytest.raises(ValueError) as info:
+        _convert_fields("1,x,3,y", _int_to_roman_line, ",")
+    assert "field 2:" in str(info.value)
+    assert "field 4:" in str(info.value)
+
+
+def test_main_field_separator_converts_each_value(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "stdin", io.StringIO("1994,58\n4,9\n"))
+    exit_code = main(["to-roman", "--field-separator", ","])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out == "MCMXCIV,LVIII\nIV,IX\n"
+
+
+def test_main_field_separator_skips_bad_rows(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "stdin", io.StringIO("MCMXCIV,LVIII\nIIII,X\nIV,IX\n"))
+    exit_code = main(["from-roman", "--field-separator", ","])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.out == "1994,58\n4,9\n"
+    assert "line 2: field 1:" in captured.err
+
+
+def test_main_field_separator_with_delimiter(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "stdin", io.StringIO("1,2;3,4"))
+    exit_code = main(["to-roman", "--delimiter", ";", "--field-separator", ","])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out == "I,II\nIII,IV\n"
+
+
+def test_main_rejects_identical_separator_and_delimiter(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "stdin", io.StringIO("1,2"))
+    with pytest.raises(SystemExit):
+        main(["to-roman", "--delimiter", ",", "--field-separator", ","])
+    assert "must differ" in capsys.readouterr().err
 
 
 def test_main_rejects_empty_delimiter(monkeypatch, capsys):

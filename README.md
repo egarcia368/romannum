@@ -67,6 +67,20 @@ $ printf '1994\t58' | romannum to-roman --delimiter '\t'
 Output is still written one result per line regardless of the input
 delimiter.
 
+For csv-style input with several values on each line, use
+`--field-separator`. Every field is converted and the line is written
+back out joined with the same separator. Empty fields stay empty:
+
+```
+$ printf '1994,58\n4,,9\n' | romannum to-roman --field-separator ,
+MCMXCIV,LVIII
+IV,,IX
+```
+
+If any field in a row is invalid, the whole row is skipped and the
+error lists each bad field (`line 2: field 1: ...`). It can be combined
+with `--delimiter` as long as the two strings differ.
+
 Valid input is a plain integer from 1 to 3999 for `to-roman`, or a
 canonical roman numeral (e.g. `IX`, not `VIIII`) for `from-roman`.
 Roman numerals have no way to represent zero or negative numbers, and
